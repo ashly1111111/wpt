@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html class="reftest-wait">
+<meta name=fuzzy content="maxDifference=1;totalPixels=10000">
+<link rel="help" href="https://drafts.csswg.org/css-backgrounds-3/#background-color">
+<link rel="match" href="one-element-animation-with-zero-alpha-ref.html">
+<style>
+.container {
+  width: 100px;
+  height: 100px;
+  animation: bgcolor 200000ms steps(2) -99995ms;
+}
+@keyframes bgcolor {
+  0% { background-color: rgba(0, 0, 0, 0); }
+  100% { background-color: rgba(200, 0, 0, 1); }
+}
+</style>
+<script src="/common/reftest-wait.js"></script>
+<body>
+<div class="container"></div>
+
+<script>
+// TODO(crbug.com/1185158): fuzzy match should not be needed.
+let start_time;
+
+function startTimer(timestamp) {
+  start_time = timestamp;
+  requestAnimationFrame(wait);
+}
+
+function wait(timestamp) {
+  if (timestamp - start_time <= 5) {
+    requestAnimationFrame(wait);
+    return;
+  }
+  takeScreenshot();
+}
+
+document.getAnimations()[0].ready.then(() => {
+  requestAnimationFrame(startTimer);
+});
+</script>
+</body>
+</html>
