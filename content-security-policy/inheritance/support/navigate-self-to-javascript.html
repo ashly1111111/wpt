@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<meta http-equiv="Content-Security-Policy" content="img-src 'none'"/>
+<body>
+<script>
+  const js_payload = `
+        <script>
+          function messageBack(msg) {
+            opener.postMessage(msg ,"*");
+          }
+        </scr`+`ipt>
+        <div>
+          <img src="${window.origin}/content-security-policy/support/fail.png"
+               onload="messageBack(\\\'img loaded\\\');"
+               onerror="messageBack(\\\'img blocked\\\');"
+          >
+        </div>
+  `;
+  open(`javascript:'${js_payload}'`,"_self");
+</script>
+
+</body>
+</html>
