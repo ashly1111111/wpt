@@ -5,12 +5,14 @@
 <script src="/resources/testharness.js"></script>
 <script src="resources/testharness-helpers.js"></script>
 <script src="/resources/testharnessreport.js"></script>
+<script src="resources/test-helpers.sub.js"></script>
 <script>
 // Tests for https://w3c.github.io/ServiceWorker/#schedule-job-algorithm
 // Non-equivalent register jobs should not be coalesced.
 const scope = 'resources/';
 const script1 = 'resources/empty.js';
 const script2 = 'resources/empty.js?change';
+const script3 = 'resources/type.js';
 
 async function cleanup() {
   const registration = await navigator.serviceWorker.getRegistration(scope);
@@ -20,14 +22,6 @@ async function cleanup() {
 
 function absolute_url(url) {
   return new URL(url, self.location).toString();
-}
-
-// A helper that returns the newest worker of the registration. This helps the
-// test fail with stable output on browers that incorrectly coalesce
-// register jobs, since then sometimes registration.installing is not
-// a new worker as expected.
-function get_newest_worker(registration) {
-  return registration.installing || registration.waiting || registration.active;
 }
 
 // Test that a change to `script` starts a new register job.
@@ -74,15 +68,35 @@ promise_test(async t => {
 
   // Check defaults.
   const registration = await
-      navigator.serviceWorker.register(script1, {scope});
-  assert_equals(registration.installing.type, 'classic');
+      navigator.serviceWorker.register(script3, {scope});
+
+  let worker_type = await new Promise((resolve) => {
+    navigator.serviceWorker.onmessage = (event) => {
+      resolve(event.data);
+    };
+    const worker = get_newest_worker(registration);
+    // The argument of postMessage doesn't matter for this case.
+    worker.postMessage('');
+  });
+
+  assert_equals(worker_type, 'classic');
 
   // Schedule two more register jobs.
-  navigator.serviceWorker.register(script1, {scope});
-  await navigator.serviceWorker.register(script1, {scope, type: 'module'});
+  navigator.serviceWorker.register(script3, {scope});
+  await navigator.serviceWorker.register(script3, {scope, type: 'module'});
 
-  // The jobs should not have been coalesced.
-  const worker = get_newest_worker(registration.installing);
-  assert_equals(worker.type, 'module');
+  worker_type = await new Promise((resolve) => {
+    navigator.serviceWorker.onmessage = (event) => {
+      resolve(event.data);
+    };
+    // The jobs should not have been coalesced. get_newest_worker() helps the
+    // test fail with stable output on browers that incorrectly coalesce register
+    // jobs, since then sometimes registration is not a new worker as expected.
+    const worker = get_newest_worker(registration);
+    // The argument of postMessage doesn't matter for this case.
+    worker.postMessage('');
+  });
+
+  assert_equals(worker_type, 'module');
 }, 'different type');
 </script>
