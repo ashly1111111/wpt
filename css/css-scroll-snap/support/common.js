@@ -22,11 +22,13 @@ async function keyPress(target, key) {
   let actions = new test_driver.Actions()
     .pointerMove(0, 0, {origin: target})
     .pointerDown()
-    .pointerUp()
-    .keyDown(code)
-    .keyUp(code);
+    .pointerUp();
 
-  return actions.send();
+  // KeyDown and KeyUp Actions not yet supported in Chrome content_shell. Use
+  // send_keys instead.
+  return actions.send().then(() => {
+    test_driver.send_keys(target, code);
+  });
 }
 
 // Use rAF to wait for the value of the getter function passed to not change for
@@ -59,6 +61,31 @@ function waitForAnimationEnd(getValue) {
       }
     }
     tick(0, start_time);
+  });
+}
+
+function waitForScrollEvent(eventTarget) {
+  return new Promise((resolve, reject) => {
+    const scrollListener = () => {
+      eventTarget.removeEventListener('scroll', scrollListener);
+      resolve();
+    };
+    eventTarget.addEventListener('scroll', scrollListener);
+  });
+}
+
+function waitForScrollEnd(eventTarget, getValue, targetValue) {
+  return new Promise((resolve, reject) => {
+    const scrollListener = () => {
+      if (getValue() == targetValue) {
+        eventTarget.removeEventListener('scroll', scrollListener);
+        resolve();
+      }
+    };
+    if (getValue() == targetValue)
+      resolve();
+    else
+      eventTarget.addEventListener('scroll', scrollListener);
   });
 }
 
